@@ -16,12 +16,19 @@
       </div>
     </nav>
     <div
+      class="flash-message flex fixed top-0 w-full justify-between items-center flex-wrap h-12 shadow-xl px-2 my-2 mx-2 bg-green-300"
       v-if="reseted"
-      class="flex fixed top-0 w-full justify-between items-center flex-wrap h-12 shadow-xl px-2 my-2 mx-2 bg-green-300"
-    >reseted successfully</div>
+    >{{ message }}</div>
+    <div
+      class="flash-message flex fixed top-0 w-full justify-between items-center flex-wrap h-12 shadow-xl px-2 my-2 mx-2 bg-green-300"
+      v-if="undone"
+    >{{ message }}</div>
     <div class="mt-200">
       <div>
-        <div class="min-w-25 text-lg bg-blue-200 py-2 px-4 mx-2 mt-8 h-16">Unsolved</div>
+        <div class="flex w-full justify-center items-center bg-blue-200 py-2 px-4 mx-2 mt-8 h-16">
+          <h3>Unresolved</h3>
+        </div>
+
         <div
           v-for="issue in unresolved"
           class="flex justify-between rounded-l-full items-center flex-wrap h-12 shadow-md px-2 my-2 mx-2 bg-red-300 hover:bg-red-400"
@@ -38,7 +45,9 @@
         </div>
       </div>
       <div>
-        <div class="min-w-25 text-lg bg-blue-200 py-2 px-4 mx-2 mt-8 h-16">Resolved</div>
+        <div class="flex w-full justify-center items-center bg-blue-200 py-2 px-4 mx-2 mt-8 h-16">
+          <h3>Resolved</h3>
+        </div>
         <div
           class="flex justify-between rounded-l-full items-center flex-wrap h-12 shadow-md px-2 my-2 mx-2 bg-green-300 hover:bg-green-400"
           v-for="issue in resolved"
@@ -55,7 +64,9 @@
         </div>
       </div>
       <div>
-        <div class="min-w-25 text-lg bg-blue-200 py-2 px-4 mx-2 mt-8 h-16">Backlog</div>
+        <div class="flex w-full justify-center items-center bg-blue-200 py-2 px-4 mx-2 mt-8 h-16">
+          <h3>Backlog</h3>
+        </div>
         <div
           class="flex justify-between rounded-l-full items-center flex-wrap h-12 shadow-md px-2 my-2 mx-2 bg-purple-300 hover:bg-purple-400"
           v-for="issue in backlog"
@@ -81,8 +92,9 @@ export default {
   async asyncData({ $axios }) {
     try {
       const { resolved, unresolved, backlog } = await $axios.$get(
-        "http://localhost:8000/get_lists"
+        "http://localhost:8000/get_lists/rezan"
       );
+
       gStore = {
         resolved: [...resolved],
         unresolved: [...unresolved],
@@ -102,6 +114,7 @@ export default {
     }
   },
   methods: {
+    // exchange item from first list to another and saving data for undo
     replace: function(item, array1, array2) {
       this.lastItem = item;
       this.lastIndex = array1.indexOf(item);
@@ -110,30 +123,44 @@ export default {
       array1.splice(array1.indexOf(item), 1);
       array2.push(item);
     },
+    resetMessage: function() {
+      this.message = `reseted successfully`;
+      this.reseted = true;
+      setTimeout(() => {
+        this.reseted = false;
+      }, 2000);
+    },
+    undoMessage: function(code) {
+      this.message = `issue with code: ${code} undone successfully`;
+      this.undone = true;
+      setTimeout(() => {
+        this.undone = false;
+      }, 2000);
+    },
     unresolve: function(issue) {
       this.replace(issue, this.resolved, this.unresolved);
     },
     resolve: function(issue) {
       this.replace(issue, this.unresolved, this.resolved);
     },
+    // move backlog item to unresolved
     moveUp: function(issue) {
       this.replace(issue, this.backlog, this.unresolved);
     },
     undo: function() {
       if (this.lastItem) {
+        let code = this.lastItem.code;
         this.fromArry.splice(this.fromArry.indexOf(this.lastItem), 1);
         this.toArry.splice(this.lastIndex, 0, this.lastItem);
         this.lastItem = this.fromArry = this.toArry = this.lastIndex = null;
+        this.undoMessage(code);
       }
     },
     reset: function() {
       this.resolved = this.store.resolved;
       this.unresolved = this.store.unresolved;
       this.backlog = this.store.backlog;
-      this.reseted = true;
-      setTimeout(() => {
-        this.reseted = false;
-      }, 1000);
+      this.resetMessage();
     }
   },
   data() {
@@ -146,7 +173,9 @@ export default {
       lastIndex: null,
       fromArry: null,
       toArry: null,
-      reseted: false
+      reseted: false,
+      undone: false,
+      message: ""
     };
   }
 };

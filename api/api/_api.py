@@ -15,27 +15,33 @@ def _generate_lists() -> Dict[str, Any]:
     """Generate resolved, unresolved and backlog lists."""
     return {
         'resolved': [{
-            'index': error_idx,
+            'id': error_idx,
             'code': random.choice(ERROR_CODES),
             'text': 'Error ABC occured, that is `resolved`'
         } for error_idx in range(50)],
         'unresolved': [{
-            'index': error_idx,
+            'id': error_idx,
             'code': random.choice(ERROR_CODES),
             'text': 'Error DEF occured, that is `unresolved`'
         } for error_idx in range(50, 100)],
         'backlog': [{
-            'index': error_idx,
+            'id': error_idx,
             'code': random.choice(ERROR_CODES),
             'text': 'Error XYZ occured, that is in the `backlog`'
         } for error_idx in range(100, 150)]
     }
 
 
-@app.get("/get_lists")
-def get_lists() -> Dict[str, Any]:
+request_count = 0
+
+
+@app.get("/get_lists/{operator_name}")
+def get_lists(operator_name) -> Dict[str, Any]:
     """Return resolved, unresolved and backlog lists."""
     LOGGER.info('Generating resolved, unresolved and backlog lists.')
+    global request_count
+    request_count += 1
+    LOGGER.info(f"user: {operator_name}, has requested: {request_count} times")
     return _generate_lists()
 
 
@@ -74,20 +80,28 @@ def get_list_intersection_counts() -> Dict[str, int]:
         ```
 
     """
-    LOGGER.info('Generating the intersection counts between a set of resolved, unresolved and backlog lists.')
+    LOGGER.info(
+        'Generating the intersection counts between a set of resolved, unresolved and backlog lists.')
 
     error_lists = _generate_lists()
     resolved, unresolved, backlog = error_lists['resolved'], error_lists['unresolved'], error_lists['backlog']
 
-    # TODO: Implement the code that calculates how many errors with *the same error code* are shared between
-    # the possible pairs of lists here. Then return a Dict like the one shown in the documentation string above,
-    # e.g.:
-    return  {
-        'resolved_unresolved': 12,
-        'resolved_backlog': 6,
-        'unresolved_backlog': 35
+    # i'm guessing that repeated code in on list doesnt count so i'm converting to set
+    # to remove duplications automatically
+    def list_intersection(list1, list2, query):
+        set1 = set([x[query] for x in list1])
+        set2 = set([x[query] for x in list2])
+        return len(set1.intersection(set2))
+
+    resolved_unresolved = list_intersection(resolved, unresolved, 'code')
+    resolved_backlog = list_intersection(resolved, backlog, 'code')
+    unresolved_backlog = list_intersection(unresolved, backlog, 'code')
+
+    return {
+        'resolved_unresolved': resolved_unresolved,
+        'resolved_backlog': resolved_backlog,
+        'unresolved_backlog': unresolved_backlog
     }
-    # NOTE: THIS IS JUST AN EXAMPLE, REPLACE WITH YOUR OWN CODE AND `return`!
 
 
 def run(host: str, port: int) -> None:
