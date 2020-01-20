@@ -3,12 +3,25 @@ import logging
 import random
 from typing import Any, Dict
 
-from fastapi import FastAPI
+from fastapi import Body, FastAPI
+from starlette.middleware.cors import CORSMiddleware
+
 import uvicorn
+
+
+app = FastAPI(debug=True)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 ERROR_CODES = [error_code for error_code in range(50)]
 LOGGER = logging.getLogger("API")
-app = FastAPI()
 
 
 def _generate_lists() -> Dict[str, Any]:
@@ -35,14 +48,24 @@ def _generate_lists() -> Dict[str, Any]:
 request_count = 0
 
 
-@app.get("/get_lists/{operator_name}")
-def get_lists(operator_name) -> Dict[str, Any]:
+@app.get("/get_lists")
+def get_lists(operator_name: str = "Rezan") -> Dict[str, Any]:
     """Return resolved, unresolved and backlog lists."""
     LOGGER.info('Generating resolved, unresolved and backlog lists.')
     global request_count
     request_count += 1
     LOGGER.info(f"user: {operator_name}, has requested: {request_count} times")
     return _generate_lists()
+
+
+@app.put("/put_resolved")
+async def put_lists(resolved: Any = Body(None)) -> Dict[str, Any]:
+    resolved_codes = list(map(lambda x: x["code"], resolved["resolved"]))
+    resolved_set = set(resolved_codes)
+    for code in resolved_set:
+        LOGGER.info(f"error code:{code} resolved {resolved_codes.count(code)} times"
+                    )
+    return resolved
 
 
 @app.get("/get_list_intersection_counts")
@@ -86,16 +109,16 @@ def get_list_intersection_counts() -> Dict[str, int]:
     error_lists = _generate_lists()
     resolved, unresolved, backlog = error_lists['resolved'], error_lists['unresolved'], error_lists['backlog']
 
-    # i'm guessing that repeated code in on list doesnt count so i'm converting to set
-    # to remove duplications automatically
-    def list_intersection(list1, list2, query):
-        set1 = set([x[query] for x in list1])
-        set2 = set([x[query] for x in list2])
+    # i'm guessing that repeated error code in one the same list doesnt count.
+    #  so i'm converting to set to remove duplications automatically
+    def list_intersection(list1, list2):
+        set1 = set([x["code"] for x in list1])
+        set2 = set([x["code"] for x in list2])
         return len(set1.intersection(set2))
 
-    resolved_unresolved = list_intersection(resolved, unresolved, 'code')
-    resolved_backlog = list_intersection(resolved, backlog, 'code')
-    unresolved_backlog = list_intersection(unresolved, backlog, 'code')
+    resolved_unresolved = list_intersection(resolved, unresolved)
+    resolved_backlog = list_intersection(resolved, backlog)
+    unresolved_backlog = list_intersection(unresolved, backlog)
 
     return {
         'resolved_unresolved': resolved_unresolved,

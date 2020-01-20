@@ -13,6 +13,10 @@
           class="w-25 text-white bg-red-500 hover:bg-red-700 py-2 px-4"
           v-on:click="reset"
         >reset</button>
+        <button
+          class="w-25 text-white bg-green-500 hover:bg-green-700 py-2 px-4"
+          v-on:click="submitResulved"
+        >submit</button>
       </div>
     </nav>
     <div
@@ -87,12 +91,14 @@
 </template>
 
 <script>
+// storing issues/errors for reseting when needed
 var gStore = {};
+
 export default {
   async asyncData({ $axios }) {
     try {
       const { resolved, unresolved, backlog } = await $axios.$get(
-        "http://localhost:8000/get_lists/rezan"
+        "http://localhost:8000/get_lists"
       );
 
       gStore = {
@@ -116,8 +122,8 @@ export default {
   methods: {
     // exchange item from first list to another and saving data for undo
     replace: function(item, array1, array2) {
-      this.lastItem = item;
-      this.lastIndex = array1.indexOf(item);
+      this.changedItem = item;
+      this.changedIndex = array1.indexOf(item);
       this.fromArry = array2;
       this.toArry = array1;
       array1.splice(array1.indexOf(item), 1);
@@ -128,14 +134,14 @@ export default {
       this.reseted = true;
       setTimeout(() => {
         this.reseted = false;
-      }, 2000);
+      }, this.messageTime);
     },
     undoMessage: function(code) {
       this.message = `issue with code: ${code} undone successfully`;
       this.undone = true;
       setTimeout(() => {
         this.undone = false;
-      }, 2000);
+      }, this.messageTime);
     },
     unresolve: function(issue) {
       this.replace(issue, this.resolved, this.unresolved);
@@ -148,19 +154,29 @@ export default {
       this.replace(issue, this.backlog, this.unresolved);
     },
     undo: function() {
-      if (this.lastItem) {
-        let code = this.lastItem.code;
-        this.fromArry.splice(this.fromArry.indexOf(this.lastItem), 1);
-        this.toArry.splice(this.lastIndex, 0, this.lastItem);
-        this.lastItem = this.fromArry = this.toArry = this.lastIndex = null;
-        this.undoMessage(code);
+      if (this.changedItem) {
+        this.fromArry.splice(this.fromArry.indexOf(this.changedItem), 1);
+        this.toArry.splice(this.changedIndex, 0, this.changedItem);
+        this.undoMessage(this.changedItem.code);
+        this.changedItem = this.fromArry = this.toArry = this.changedIndex = null;
       }
     },
+    // undo-all/reset to original values
     reset: function() {
       this.resolved = this.store.resolved;
       this.unresolved = this.store.unresolved;
       this.backlog = this.store.backlog;
       this.resetMessage();
+    },
+    submitResulved: async function() {
+      const data = {
+        resolved: this.resolved
+      };
+      const res = await this.$axios({
+        method: "put",
+        url: "http://localhost:8000/put_resolved",
+        data: data
+      }).catch(e => console.log(e));
     }
   },
   data() {
@@ -169,13 +185,14 @@ export default {
       unresolved: [],
       backlog: [],
       store: {},
-      lastItem: null,
-      lastIndex: null,
+      changedItem: null,
+      changedIndex: null,
       fromArry: null,
       toArry: null,
       reseted: false,
       undone: false,
-      message: ""
+      message: "",
+      messageTime: 1500
     };
   }
 };

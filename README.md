@@ -68,7 +68,7 @@ _frontend version two_
 _api version two_
 
 - [x] add the `operator_name` as a parameter to the request that is sent from the `frontend` to the `api` to get the error lists. Then log how many times a certain operator requested data (you can store these numbers in memory, no persistent storage required). You may hardcode a name in the frontend, e.g., `operator_name: 'YOUR NAME'`.
-- [ ] add a new functionality: The operator can send all errors that are currently marked as `resolved` to the `api`, the `api` prints out how many times a certain `error.code` was resolved
+- [x] add a new functionality: The operator can send all errors that are currently marked as `resolved` to the `api`, the `api` prints out how many times a certain `error.code` was resolved
 
 Note: These are in no particular order, start and do whatever you like. If you have a good idea on how to solve one of these problems, it would be a good idea to start with that problem. We appreaciate nice UI/UX implementations, but we also appreaciate efficient and smart data structure/logic implementations.
 
