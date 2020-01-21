@@ -45,26 +45,31 @@ def _generate_lists() -> Dict[str, Any]:
     }
 
 
-request_count = 0
+request_count = {}
 
 
-@app.get("/get_lists")
+@app.get("/get_lists/")
 def get_lists(operator_name: str = "Rezan") -> Dict[str, Any]:
     """Return resolved, unresolved and backlog lists."""
     LOGGER.info('Generating resolved, unresolved and backlog lists.')
     global request_count
-    request_count += 1
-    LOGGER.info(f"user: {operator_name}, has requested: {request_count} times")
+    if operator_name not in request_count:
+        request_count[operator_name] = 0
+
+    request_count[operator_name] += 1
+    message = f"user: {operator_name}, has requested: {request_count[operator_name]} times"
+    LOGGER.info(message)
     return _generate_lists()
 
 
 @app.put("/put_resolved")
-async def put_lists(resolved: Any = Body(None)) -> Dict[str, Any]:
+async def put_lists(resolved: Any = Body({"resolved": []})) -> Dict[str, Any]:
     resolved_codes = list(map(lambda x: x["code"], resolved["resolved"]))
     resolved_set = set(resolved_codes)
     for code in resolved_set:
-        LOGGER.info(f"error code:{code} resolved {resolved_codes.count(code)} times"
-                    )
+        message = f"error code:{code} resolved {resolved_codes.count(code)} times"
+        LOGGER.info(message)
+
     return resolved
 
 

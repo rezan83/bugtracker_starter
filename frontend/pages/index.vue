@@ -19,13 +19,10 @@
         >submit</button>
       </div>
     </nav>
+
     <div
-      class="flash-message flex fixed top-0 w-full justify-between items-center flex-wrap h-12 shadow-xl px-2 my-2 mx-2 bg-green-300"
-      v-if="reseted"
-    >{{ message }}</div>
-    <div
-      class="flash-message flex fixed top-0 w-full justify-between items-center flex-wrap h-12 shadow-xl px-2 my-2 mx-2 bg-green-300"
-      v-if="undone"
+      class="flash-message flex fixed top-0 w-full justify-center items-center flex-wrap h-12 shadow-xl px-2 my-2 mx-2 bg-green-300"
+      v-if="showMessage"
     >{{ message }}</div>
     <div class="mt-200">
       <div>
@@ -98,7 +95,7 @@ export default {
   async asyncData({ $axios }) {
     try {
       const { resolved, unresolved, backlog } = await $axios.$get(
-        "http://localhost:8000/get_lists"
+        "http://localhost:8000/get_lists/"
       );
 
       gStore = {
@@ -129,18 +126,11 @@ export default {
       array1.splice(array1.indexOf(item), 1);
       array2.push(item);
     },
-    resetMessage: function() {
-      this.message = `reseted successfully`;
-      this.reseted = true;
+    flashMessage: function(message) {
+      this.message = message;
+      this.showMessage = true;
       setTimeout(() => {
-        this.reseted = false;
-      }, this.messageTime);
-    },
-    undoMessage: function(code) {
-      this.message = `issue with code: ${code} undone successfully`;
-      this.undone = true;
-      setTimeout(() => {
-        this.undone = false;
+        this.showMessage = false;
       }, this.messageTime);
     },
     unresolve: function(issue) {
@@ -157,7 +147,8 @@ export default {
       if (this.changedItem) {
         this.fromArry.splice(this.fromArry.indexOf(this.changedItem), 1);
         this.toArry.splice(this.changedIndex, 0, this.changedItem);
-        this.undoMessage(this.changedItem.code);
+        let message = `issue with code: ${this.changedItem.code} undone successfully`;
+        this.flashMessage(message);
         this.changedItem = this.fromArry = this.toArry = this.changedIndex = null;
       }
     },
@@ -166,17 +157,22 @@ export default {
       this.resolved = this.store.resolved;
       this.unresolved = this.store.unresolved;
       this.backlog = this.store.backlog;
-      this.resetMessage();
+      let message = `reseted successfully`;
+      this.flashMessage(message);
     },
     submitResulved: async function() {
       const data = {
         resolved: this.resolved
       };
+
       const res = await this.$axios({
         method: "put",
         url: "http://localhost:8000/put_resolved",
+        headers: { "Content-Type": "application/json" },
         data: data
       }).catch(e => console.log(e));
+      let message = `all resolved issues submitted successfully`;
+      this.flashMessage(message);
     }
   },
   data() {
@@ -191,6 +187,8 @@ export default {
       toArry: null,
       reseted: false,
       undone: false,
+      submitted: false,
+      showMessage: false,
       message: "",
       messageTime: 1500
     };
