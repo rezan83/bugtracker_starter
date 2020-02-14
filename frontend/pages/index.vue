@@ -168,11 +168,17 @@ export default {
       const res = await this.$axios({
         method: "put",
         url: "http://localhost:8000/put_resolved",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+          // "Access-Control-Allow-Origin": "*"
+        },
         data: data
-      }).catch(e => console.log(e));
-      let message = `all resolved issues submitted successfully`;
-      this.flashMessage(message);
+      })
+        .then(() => {
+          let message = `all resolved issues submitted successfully`;
+          this.flashMessage(message);
+        })
+        .catch(e => console.log(e));
     }
   },
   data() {
